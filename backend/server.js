@@ -11,23 +11,29 @@ const { createApiRouter } = require('./src/routes/api');
 
 const app = express();
 
-// ✅ FIXED CORS (FINAL)
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://logi-edge-billing.vercel.app",
-  "https://logi-edge-billing-git-main-ahmedtabish1212-6507s-projects.vercel.app",
-  "https://logi-edge-billing-ncl8bugf7-ahmedtabish1212-6507s-projects.vercel.app"
-];
-
+// ✅ SMART CORS FIX (FINAL)
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // allow Postman / curl
-      if (allowedOrigins.includes(origin)) {
+      // allow requests without origin (Postman etc.)
+      if (!origin) return callback(null, true);
+
+      // allow localhost (development)
+      if (origin.includes("localhost")) {
         return callback(null, true);
-      } else {
-        return callback(new Error("Not allowed by CORS"));
       }
+
+      // allow ALL vercel deployments
+      if (origin.includes("vercel.app")) {
+        return callback(null, true);
+      }
+
+      // allow your main domain (optional)
+      if (origin === "https://logi-edge-billing.vercel.app") {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
@@ -37,6 +43,7 @@ app.use(express.json());
 
 app.use('/api', createApiRouter(pool));
 
+// global error handler
 app.use((error, _req, res, _next) => {
   console.error(error);
   res.status(500).json({
@@ -48,7 +55,7 @@ app.use((error, _req, res, _next) => {
 initializeDatabase(pool)
   .then(() => {
     app.listen(PORT, () => {
-      console.log(`Backend running on http://localhost:${PORT}`);
+      console.log(`Backend running on port ${PORT}`);
     });
   })
   .catch((error) => {
